@@ -1,0 +1,190 @@
+class Program
+{
+    static string GenerateDescriptor(string code, LexicalAnalyzer analyzer)
+    {
+        string descriptorText = "";
+        string[] lines = code.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        int lineIndex = 0;
+        string pattern = @"([\s;:,.()\[\]<>+\-*/=])";
+        foreach (var line in lines)
+        {
+            lineIndex++;
+            string res = line.TrimStart();
+            string[] tokens = Regex.Split(res, pattern);
+
+            foreach (var token in tokens)
+            {
+                string descriptor = "";
+
+
+                if (analyzer.Keywords.Contains(token))
+                {
+                    descriptor = "(K1" + "," + (analyzer.Keywords.IndexOf(token) + 1) + ")";
+                }
+                else if (analyzer.Identifiers.Contains(token))
+                {
+                    descriptor = "(K3" + "," + (analyzer.Identifiers.IndexOf(token) + 1) + ")";
+                }
+                else if (analyzer.Constants.Contains(token))
+                {
+                    descriptor = "(K4" + "," + (analyzer.Constants.IndexOf(token) + 1) + ")";
+                }
+                else if (analyzer.Delimiters.Contains(token))
+                {
+                    descriptor = "(K2" + "," + (analyzer.Delimiters.IndexOf(token) + 1) + ")";
+                }
+
+                descriptorText += descriptor;
+            }
+
+            descriptorText += "\n";
+        }
+
+        return descriptorText;
+    }
+    static void Main(string[] args)
+    {
+        string code = @"
+    program SquareArrayElements;
+    var
+        x: integer;
+        y: integer;
+    begin
+        x = 2;
+        y = sin(x);
+    end.";
+
+
+        LexicalAnalyzer analyzer = new LexicalAnalyzer();
+        analyzer.Analyze(code);
+
+
+        Console.WriteLine("Keywords:");
+        foreach (var keyword in analyzer.Keywords)
+        {
+            Console.WriteLine(keyword);
+        }
+
+
+        Console.WriteLine("\nDelimiters:");
+        foreach (var delimiter in analyzer.Delimiters)
+        {
+            Console.WriteLine(delimiter);
+        }
+
+
+        Console.WriteLine("\nIdentifiers:");
+        foreach (var identifier in analyzer.Identifiers)
+        {
+            Console.WriteLine(identifier);
+        }
+
+
+        Console.WriteLine("\nConstants:");
+        foreach (var constant in analyzer.Constants)
+        {
+            Console.WriteLine(constant);
+        }
+        Console.WriteLine();
+        Console.WriteLine("Дескриптор:");
+        Console.WriteLine(GenerateDescriptor(code, analyzer));
+    }
+}
+
+
+class LexicalAnalyzer
+{
+    public List<string> Keywords { get; private set; }
+    public List<string> Delimiters { get; private set; }
+    public List<string> Identifiers { get; private set; }
+    public List<string> Constants { get; private set; }
+
+
+
+    public LexicalAnalyzer()
+    {
+        Keywords = new List<string>();
+        Delimiters = new List<string>();
+        Identifiers = new List<string>();
+        Constants = new List<string>();
+
+    }
+
+
+    public void Analyze(string code)
+    {
+
+        string[] keywords = { "program", "var", "begin", "end", "if", "then", "else", "for", "to", "do", "sin","cos","tan", "exp","integer", "real", "const", "array", "of", "Writeln" };
+        string[] delimiters = { ";", ":", ",", ".", "(", ")", "[", "]", "<", ">", "+", "-", "*", "/", "=" };
+        string[] tokens = code.Split(new char[] { ';', ':', ',', '.', '(', ')', '[', ']', '<', '>', '+', '-', '*', '/', '=', ' ', '\n', '\t', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        string pattern = @"[^;:,.()\[\]<>+\-*/=]+";
+        string result = Regex.Replace(code, pattern, " ");
+        string[] razd = result.Split(' ');
+        foreach (string token in tokens)
+        {
+            // Ignore empty tokens
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                continue;
+            }
+
+
+            // Check if the token is a keyword
+            if (keywords.Contains(token))
+            {
+                AddToTable(token, Keywords);
+            }
+            // Check if the token is an identifier
+            else if (IsIdentifier(token))
+            {
+                AddToTable(token, Identifiers);
+            }
+            // Check if the token is a constant
+            else if (IsConstant(token))
+            {
+                AddToTable(token, Constants);
+            }
+
+        }
+        foreach (string token in razd)
+        {
+            if (token.Length > 1)
+            {
+                string sub = token.Substring(0, 1);
+                if (delimiters.Contains(sub))
+                {
+                    AddToTable(sub, Delimiters);
+                }
+            }
+            // Check if the token is a delimiter
+            if (delimiters.Contains(token))
+            {
+                AddToTable(token, Delimiters);
+            }
+        }
+    }
+
+
+    private void AddToTable(string token, List<string> table)
+    {
+        if (!table.Contains(token))
+        {
+            table.Add(token);
+        }
+    }
+
+
+    private bool IsIdentifier(string token)
+    {
+        return Regex.IsMatch(token, @"^[a-zA-Z_]\w*$");
+    }
+
+
+    private bool IsConstant(string token)
+    {
+        return Regex.IsMatch(token, @"^\d+(&#46;\d+)?$");
+    }
+
+
+
+}
